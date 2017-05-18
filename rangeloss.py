@@ -9,3 +9,6 @@ class RangeLossOp(mx.operator.CustomOp):
         self.k = k
         self.alpha = alpha
         self.beta = beta
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        x, label

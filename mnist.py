@@ -12,29 +12,12 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--max_epoch', type=int, default=20, help='number of epoch')
-    parser.add_argument('--batch_size', type=int, default=128, help='batch size')
-    parser.add_argument('--gpu', type=int, default=0, help='gpu index')
-    parser.add_argument('--train', action='store_true', help='train mnist')
-    parser.add_argument('--test', action='store_true', help='train mnist and plot')
-    parser.add_argument('--useSoftmaxOnly', type=bool, default=False, help='use softmax loss')
-    parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
-    parser.add_argument('--lambda', type=float, default=5, help='lambda to balance the loss')
-    parser.add_argument('--margin', type=float, default=20000, help='margin parameter')
-    parser.add_argument('--alpha', type=float, default=1, help='alpha parameter')
-    parser.add_argument('--beta', type=float, default=1, help='beta parameter')
-    parser.add_argument('--k', type=float, default=2, help='k parameter')
-    args = parser.parse_args()
-
-
 def inference():
     data = mx.sym.Variable('data')
-    label = mx.sym.Variable('label')
+    label = mx.sym.Variable('softmax_label')
     conv1 = mx.sym.Convolution(data=data, kernel=(5, 5), num_filter=32)
     relu1 = mx.sym.Activation(data=conv1, act_type='relu')
-    pool1 = mx.sym.Convoluton(data=relu1, kernel=(2, 2), stride=(2, 2), pool_type='max')
+    pool1 = mx.sym.Pooling(data=relu1, kernel=(2, 2), stride=(2, 2), pool_type='max')
     conv2 = mx.sym.Convolution(data=pool1, kernel=(5, 5), num_filter=64)
     relu2 = mx.sym.Activation(data=conv2, act_type='relu')
     pool2 = mx.sym.Pooling(data=relu2, kernel=(2, 2), stride=(2, 2), pool_type='max')
@@ -48,7 +31,7 @@ def inference():
 
     softmax_loss = mx.sym.SoftmaxOutput(data=embedding, label=label)
 
-    return softmax_loss + range_loss
+    return softmax_loss + args.l*range_loss
 
 
 def train():
@@ -90,3 +73,26 @@ def train():
 
 def test():
     ctx = mx.gpu(args.gpu) if args.gpu >= 0 else mx.cpu()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--max_epoch', type=int, default=20, help='number of epoch')
+    parser.add_argument('--batch_size', type=int, default=128, help='batch size')
+    parser.add_argument('--gpu', type=int, default=0, help='gpu index')
+    parser.add_argument('--train', action='store_true', help='train mnist')
+    parser.add_argument('--test', action='store_true', help='train mnist and plot')
+    parser.add_argument('--useSoftmaxOnly', type=bool, default=False, help='use softmax loss')
+    parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
+    parser.add_argument('--l', type=float, default=5, help='lambda to balance the loss')
+    parser.add_argument('--m', type=float, default=20000, help='margin parameter')
+    parser.add_argument('--a', type=float, default=1, help='alpha parameter')
+    parser.add_argument('--b', type=float, default=1, help='beta parameter')
+    parser.add_argument('--k', type=float, default=2, help='k parameter')
+    args = parser.parse_args()
+
+    if args.train:
+        train()
+
+    if args.test:
+        test()
