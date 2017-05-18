@@ -27,14 +27,14 @@ def inference():
 
     fc4 = mx.sym.FullyConnected(data=embedding, num_hidden=10, no_bias=True)
 
-    # if not args.useSoftmaxOnly:
-    #     range_loss = mx.sym.Custom(data=fc4, label=label, num_hidden=10, op_type='RangeLoss')
-    # else:
-    #     range_loss = 0
+    if not args.useSoftmaxOnly:
+        softmax_loss = mx.sym.SoftmaxOutput(data=fc4, label=label, name='softmax')
+        range_loss = mx.sym.Custom(data=fc4, label=label, num_hidden=10, op_type='RangeLoss')
 
-    softmax_loss = mx.sym.SoftmaxOutput(data=fc4, label=label, name='softmax')
-
-    return softmax_loss
+        return softmax_loss + args.l * range_loss
+    else:
+        softmax_loss = mx.sym.SoftmaxOutput(data=fc4, label=label, name='softmax')
+        return softmax_loss
 
 
 def plot_mnist(feature, label, fname):
@@ -135,7 +135,7 @@ def test():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--max_epoch', type=int, default=50, help='number of epoch')
+    parser.add_argument('--max_epoch', type=int, default=20, help='number of epoch')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--gpu', type=int, default=0, help='gpu index')
     parser.add_argument('--train', action='store_true', help='train mnist')
