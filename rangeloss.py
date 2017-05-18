@@ -56,14 +56,17 @@ class RangeLossOp(mx.operator.CustomOp):
         l_intra = np.sum(l_r)
         d_center = self.compute_min_dist(centers)
         l_inter = max(self.margin - d_center, 0)
-        out = l_intra * self.alpha + l_inter * self.beta
-        self.assign(out_data[0], req[0], mx.nd.array(out))
+        loss = l_intra * self.alpha + l_inter * self.beta
+        self.assign(out_data[0], req[0], mx.nd.array(loss))
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        l = in_data[1].asnumpy().ravel().astype(np.int)
+        features = in_data[0].asnumpy()
+        labels = in_data[1].asnumpy()
+
+        self.assign(in_grad[0], req[0], mx.nd.array(y))
 
 
-@mx.operator.register('RangeLoss')
+@mx.operator.register('rangeloss')
 class RangeLossOpProp(mx.operator.CustomOpProp):
     def __init__(self, num_hidden, alpha, beta, margin=20000, k=2):
         super(RangeLossOpProp, self).__init__(need_top_grad=False)

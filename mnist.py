@@ -130,7 +130,7 @@ def test():
     embeds = np.vstack(embeds)
     labels = np.hstack(labels)
 
-    plot_mnist(embeds, labels, 'plot/plot-softmax.png')
+    plot_mnist(embeds, labels, args.plot)
 
 
 if __name__ == '__main__':
@@ -148,7 +148,14 @@ if __name__ == '__main__':
     parser.add_argument('--b', type=float, default=1, help='beta parameter')
     parser.add_argument('--k', type=float, default=2, help='k parameter')
     parser.add_argument('--model_prefix', type=str, default='model/mnist', help='model prefix')
+    parser.add_argument('--plot', type=str, default='plot/plot-softmax.png', help='plot path')
     args = parser.parse_args()
+
+    if not os.path.exists('model'):
+        os.mkdir('model')
+
+    if not os.path.exists('plot'):
+        os.mkdir('plot')
 
     if args.train:
         train()
