@@ -20,7 +20,7 @@ class RangeLossOp(mx.operator.CustomOp):
 
         dist_array = dists.reshape((1, -1))
 
-        return dist_array.argsort()[-self.k:]
+        return dist_array.sort()[-self.k:]
 
     def compute_min_dist(self, centers):
         num = centers.shape[0]
@@ -33,7 +33,7 @@ class RangeLossOp(mx.operator.CustomOp):
         dist_array = dists.reshape((1, -1))
         dist_array = dist_array[np.where(dist_array > 0)]
 
-        return dist_array.argsort()[0]
+        return dist_array.sort()[0]
 
     def forward(self, is_train, req, in_data, out_data, aux):
         features = in_data[0].asnumpy()
@@ -61,7 +61,25 @@ class RangeLossOp(mx.operator.CustomOp):
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         features = in_data[0].asnumpy()
-        labels = in_data[1].asnumpy()
+        labels = in_data[1].asnumpy().ravel().astype(np.int)
+
+        unique_labels, counts = np.unique(labels, return_counts=True)
+
+        centers = np.zeros((unique_labels.shape[0], features.shape[1]))
+        d = np.zeros((unique_labels.shape[0], self.k))
+
+        l_r = np.zeros((unique_labels.shape[0]))
+
+        for idx, l in enumerate(unique_labels):
+            indices = np.where(labels == l)
+            features_l = features[indices, :]
+            centers[idx, :] = np.mean(features_l, axis=0)
+            d[idx, :] = self.compute_top_k(features_l)
+            l_r[idx] = self.k / np.sum(d[idx, :])
+
+        l_intra = np.sum(l_r)
+        d_center = self.compute_min_dist(centers)
+        l_inter = max(self.margin - d_center, 0)
 
         self.assign(in_grad[0], req[0], mx.nd.array(y))
 
