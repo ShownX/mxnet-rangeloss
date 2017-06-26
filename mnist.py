@@ -60,7 +60,7 @@ def plot_mnist(feature, label, fname):
             PathEffects.Normal()])
         txts.append(txt)
 
-    plt.show()
+    # plt.show()
     f.savefig(fname)
 
 
@@ -117,20 +117,28 @@ def test():
             batch_size=1)
     symbol, arg_params, aux_params = mx.model.load_checkpoint(args.model_prefix, args.max_epoch)
     embedding = symbol.get_internals()['embedding_output']
-    mod = mx.mod.Module(symbol=embedding, context=ctx, data_names=('data', ))
-    mod.bind(data_shapes=[('data', (1, 1, 28, 28))], for_training=False)
-    mod.init_params(arg_params=arg_params, aux_params=aux_params)
+    feature_extractor = mx.mod.Module(symbol=embedding, context=ctx, data_names=['data'], label_names=['softmax_label'])
+    feature_extractor.bind(data_shapes=val_iter.provide_data, for_training=False)
+    feature_extractor.set_params(arg_params=arg_params, aux_params=aux_params)
 
     embeds = []
     labels = []
-    for preds, i_batch, batch in mod.iter_predict(val_iter):
+    for preds, i_batch, batch in feature_extractor.iter_predict(val_iter):
         embeds.append(preds[0].asnumpy())
         labels.append(batch.label[0].asnumpy())
 
     embeds = np.vstack(embeds)
     labels = np.hstack(labels)
 
-    plot_mnist(embeds, labels, args.plot)
+    if not os.path.exists('plot'):
+        os.mkdir('plot')
+
+    plot_fpath = os.path.join('plot', 'plot-rangeloss.png')
+
+    if args.useSoftmaxOnly:
+        plot_fpath = os.path.join('plot', 'plot-softmax.png')
+
+    plot_mnist(embeds, labels, plot_fpath)
 
 
 if __name__ == '__main__':
@@ -140,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=int, default=0, help='gpu index')
     parser.add_argument('--train', action='store_true', help='train mnist')
     parser.add_argument('--test', action='store_true', help='train mnist and plot')
-    parser.add_argument('--useSoftmaxOnly', type=bool, default=False, help='use softmax loss')
+    parser.add_argument('--useSoftmaxOnly', action='store_true', help='use softmax loss')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--l', type=float, default=5, help='lambda to balance the loss')
     parser.add_argument('--m', type=float, default=20000, help='margin parameter')
@@ -148,7 +156,6 @@ if __name__ == '__main__':
     parser.add_argument('--b', type=float, default=1, help='beta parameter')
     parser.add_argument('--k', type=float, default=2, help='k parameter')
     parser.add_argument('--model_prefix', type=str, default='model/mnist', help='model prefix')
-    parser.add_argument('--plot', type=str, default='plot/plot-softmax.png', help='plot path')
     args = parser.parse_args()
 
     if not os.path.exists('model'):
